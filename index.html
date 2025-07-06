@@ -66,10 +66,13 @@
         </div>
     </div>
 
-    <div id="app-container" class="flex h-screen">
+    <div class="relative min-h-screen md:flex">
+        <!-- Mobile Menu Overlay -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
+
         <!-- Sidebar -->
-        <aside class="w-64 bg-white dark:bg-gray-800 shadow-lg flex flex-col">
-            <div class="p-6 text-2xl font-bold text-indigo-600 dark:text-indigo-400 border-b border-gray-200 dark:border-gray-700">
+        <aside id="sidebar" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out z-40 flex flex-col shadow-lg md:shadow-none">
+            <div class="px-4 text-2xl font-bold text-indigo-600 dark:text-indigo-400 border-b border-gray-200 dark:border-gray-700 pb-4">
                 <i class="fas fa-vest-patches mr-2"></i> Manajer Lemari
             </div>
             <nav id="navigation" class="flex-grow p-4 space-y-2">
@@ -96,16 +99,27 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 p-6 lg:p-10 overflow-y-auto">
-            <div id="main-content">
-                <!-- Content will be injected here by JavaScript -->
-            </div>
-        </main>
+        <div class="flex-1 flex flex-col">
+             <!-- Mobile Header -->
+            <header class="md:hidden bg-white dark:bg-gray-800 shadow-md">
+                <div class="flex justify-between items-center p-4">
+                    <h1 id="mobile-page-title" class="text-xl font-bold text-indigo-600 dark:text-indigo-400">Dashboard</h1>
+                    <button id="hamburger-button" class="text-gray-800 dark:text-gray-200 focus:outline-none">
+                        <i class="fas fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </header>
+            <main class="flex-1 p-4 sm:p-6 lg:p-10 overflow-y-auto">
+                <div id="main-content">
+                    <!-- Content will be injected here by JavaScript -->
+                </div>
+            </main>
+        </div>
     </div>
 
     <!-- Add/Edit Clothing Modal -->
     <div id="clothing-modal" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop hidden items-center justify-center z-50 overflow-y-auto">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg p-8 m-4 modal-content transform scale-95">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg p-6 sm:p-8 m-4 modal-content transform scale-95">
             <h2 id="modal-title" class="text-2xl font-bold mb-6">Tambah Pakaian Baru</h2>
             <form id="clothing-form">
                 <input type="hidden" id="clothing-id">
@@ -211,6 +225,10 @@
         const userInfoContainer = document.getElementById('user-info');
         const imagePreview = document.getElementById('image-preview');
         const fileInput = document.getElementById('foto');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const hamburgerButton = document.getElementById('hamburger-button');
+        const mobilePageTitle = document.getElementById('mobile-page-title');
 
         // --- Helper Functions ---
         function showToast(message, type = 'success') {
@@ -249,12 +267,24 @@
             confirmModal.classList.remove('flex');
         }
 
+        function updateMobileHeader(view) {
+            const viewTitles = {
+                dashboard: 'Dashboard',
+                'all-clothes': 'Semua Pakaian',
+                'laundry-basket': 'Keranjang Cucian',
+                'create-outfit': 'Buat Kostum',
+                'all-outfits': 'Daftar Kostum'
+            };
+            mobilePageTitle.textContent = viewTitles[view] || 'Manajer Lemari';
+        }
+
         // --- Render Functions ---
         function render() {
             if (!isAuthReady) return;
             navigation.querySelectorAll('a').forEach(link => {
                 link.classList.toggle('nav-active', link.dataset.view === currentView);
             });
+            updateMobileHeader(currentView);
             switch (currentView) {
                 case 'dashboard': renderDashboard(); break;
                 case 'all-clothes': renderAllClothes(); break;
@@ -266,30 +296,26 @@
         }
 
         function renderDashboard() {
-            const totalClothes = allClothes.length;
-            const washedCount = allClothes.filter(c => c.statusCuci).length;
-            const unwashedCount = totalClothes - washedCount;
-            const typeCategories = {
-                'Atasan': ['Kaos Pendek', 'Kaos Panjang', 'Kaos Bekerah', 'Kemeja', 'PDH/Seragam', 'Kemeja Muslim', 'Batik', 'Jaket'],
-                'Bawahan': ['Celana Panjang', 'Celana Panjang Sport', 'Sarung'],
-                'Aksesoris': ['Fungsional', 'Fashion']
-            };
-            const typeCounts = {
-                'Atasan': allClothes.filter(c => typeCategories['Atasan'].includes(c.tipeBaju)).length,
-                'Bawahan': allClothes.filter(c => typeCategories['Bawahan'].includes(c.tipeBaju)).length,
-                'Aksesoris': allClothes.filter(c => typeCategories['Aksesoris'].includes(c.tipeBaju)).length
-            };
             mainContent.innerHTML = `
-                <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
+                <h1 class="text-3xl font-bold mb-6 hidden md:block">Dashboard</h1>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400">Total Pakaian</h3><p class="text-4xl font-bold text-indigo-600 dark:text-indigo-400">${totalClothes}</p></div>
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400">Sudah Dicuci</h3><p class="text-4xl font-bold text-green-500">${washedCount}</p></div>
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400">Perlu Dicuci</h3><p class="text-4xl font-bold text-red-500">${unwashedCount}</p></div>
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400">Total Pakaian</h3><p class="text-4xl font-bold text-indigo-600 dark:text-indigo-400">${allClothes.length}</p></div>
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400">Sudah Dicuci</h3><p class="text-4xl font-bold text-green-500">${allClothes.filter(c => c.statusCuci).length}</p></div>
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400">Perlu Dicuci</h3><p class="text-4xl font-bold text-red-500">${allClothes.filter(c => !c.statusCuci).length}</p></div>
                 </div>
                 <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
                     <h3 class="text-xl font-bold mb-4">Distribusi Tipe Pakaian</h3>
                     <div class="space-y-4">
-                        ${Object.keys(typeCounts).map(type => `<div class="flex items-center"><span class="w-24 font-medium">${type}</span><div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6"><div class="bg-indigo-500 h-6 rounded-full text-white text-sm flex items-center justify-center" style="width: ${totalClothes > 0 ? (typeCounts[type] / totalClothes) * 100 : 0}%">${typeCounts[type]}</div></div></div>`).join('')}
+                        ${['Atasan', 'Bawahan', 'Aksesoris'].map(type => {
+                            const typeCategories = {
+                                'Atasan': ['Kaos Pendek', 'Kaos Panjang', 'Kaos Bekerah', 'Kemeja', 'PDH/Seragam', 'Kemeja Muslim', 'Batik', 'Jaket'],
+                                'Bawahan': ['Celana Panjang', 'Celana Panjang Sport', 'Sarung'],
+                                'Aksesoris': ['Fungsional', 'Fashion']
+                            };
+                            const count = allClothes.filter(c => typeCategories[type].includes(c.tipeBaju)).length;
+                            const percentage = allClothes.length > 0 ? (count / allClothes.length) * 100 : 0;
+                            return `<div class="flex items-center"><span class="w-24 font-medium">${type}</span><div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6"><div class="bg-indigo-500 h-6 rounded-full text-white text-sm flex items-center justify-center" style="width: ${percentage}%">${count}</div></div></div>`
+                        }).join('')}
                     </div>
                 </div>`;
         }
@@ -321,14 +347,24 @@
 
         function renderAllClothes() {
             const clothesHTML = allClothes.map(generateClothingCard).join('');
-            mainContent.innerHTML = `<div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-bold">Semua Pakaian</h1><button id="add-clothing-btn" class="btn-primary px-4 py-2 rounded-lg font-semibold flex items-center"><i class="fas fa-plus mr-2"></i> Tambah Pakaian</button></div>${allClothes.length > 0 ? `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">${clothesHTML}</div>` : `<div class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md"><i class="fas fa-box-open text-5xl text-gray-400 mb-4"></i><h2 class="text-xl font-semibold">Lemari Anda masih kosong.</h2><p class="text-gray-500">Mulai dengan menambahkan pakaian baru!</p></div>`}`;
+            mainContent.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold hidden md:block">Semua Pakaian</h1>
+                    <div class="flex-grow md:flex-grow-0"></div>
+                    <button id="add-clothing-btn" class="btn-primary px-4 py-2 rounded-lg font-semibold flex items-center w-full md:w-auto justify-center">
+                        <i class="fas fa-plus mr-2"></i> Tambah Pakaian
+                    </button>
+                </div>
+                ${allClothes.length > 0 ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">${clothesHTML}</div>` : `<div class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md"><i class="fas fa-box-open text-5xl text-gray-400 mb-4"></i><h2 class="text-xl font-semibold">Lemari Anda masih kosong.</h2><p class="text-gray-500">Mulai dengan menambahkan pakaian baru!</p></div>`}`;
             document.getElementById('add-clothing-btn')?.addEventListener('click', () => showClothingModal());
         }
 
         function renderLaundryBasket() {
             const unwashedClothes = allClothes.filter(c => !c.statusCuci);
             const clothesHTML = unwashedClothes.map(generateClothingCard).join('');
-            mainContent.innerHTML = `<div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-bold">Keranjang Cucian</h1></div>${unwashedClothes.length > 0 ? `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">${clothesHTML}</div>` : `<div class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md"><i class="fas fa-check-circle text-5xl text-green-500 mb-4"></i><h2 class="text-xl font-semibold">Hebat! Semua pakaian Anda bersih.</h2><p class="text-gray-500">Tidak ada yang perlu dicuci saat ini.</p></div>`}`;
+            mainContent.innerHTML = `
+                <h1 class="text-3xl font-bold mb-6 hidden md:block">Keranjang Cucian</h1>
+                ${unwashedClothes.length > 0 ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">${clothesHTML}</div>` : `<div class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md"><i class="fas fa-check-circle text-5xl text-green-500 mb-4"></i><h2 class="text-xl font-semibold">Hebat! Semua pakaian Anda bersih.</h2><p class="text-gray-500">Tidak ada yang perlu dicuci saat ini.</p></div>`}`;
         }
 
         function renderCreateOutfit() {
@@ -338,7 +374,17 @@
             const bottoms = cleanClothes.filter(c => typeCategories['Bawahan'].includes(c.tipeBaju));
             const accessories = cleanClothes.filter(c => typeCategories['Aksesoris'].includes(c.tipeBaju));
             const createOption = (item) => `<option value="${item.id}">${item.namaBaju}</option>`;
-            mainContent.innerHTML = `<h1 class="text-3xl font-bold mb-6">Buat Kostum Baru</h1><div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md max-w-2xl mx-auto"><form id="outfit-form"><div class="mb-4"><label for="namaKostum" class="block mb-2 text-sm font-medium">Nama Kostum</label><input type="text" id="namaKostum" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" placeholder="cth: Setelan Kantor Santai" required></div><div class="mb-4"><label for="pilihAtasan" class="block mb-2 text-sm font-medium">Pilih Atasan</label><select id="pilihAtasan" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"><option value="">-- Tidak ada --</option>${tops.map(createOption).join('')}</select></div><div class="mb-4"><label for="pilihBawahan" class="block mb-2 text-sm font-medium">Pilih Bawahan</label><select id="pilihBawahan" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"><option value="">-- Tidak ada --</option>${bottoms.map(createOption).join('')}</select></div><div class="mb-6"><label for="pilihAksesoris" class="block mb-2 text-sm font-medium">Pilih Aksesoris</label><select id="pilihAksesoris" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"><option value="">-- Tidak ada --</option>${accessories.map(createOption).join('')}</select></div><div class="flex justify-end"><button type="submit" class="btn-primary px-6 py-2 rounded-lg font-semibold">Simpan Kostum</button></div></form></div>`;
+            mainContent.innerHTML = `
+                <h1 class="text-3xl font-bold mb-6 hidden md:block">Buat Kostum Baru</h1>
+                <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-md max-w-2xl mx-auto">
+                    <form id="outfit-form">
+                        <div class="mb-4"><label for="namaKostum" class="block mb-2 text-sm font-medium">Nama Kostum</label><input type="text" id="namaKostum" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" placeholder="cth: Setelan Kantor Santai" required></div>
+                        <div class="mb-4"><label for="pilihAtasan" class="block mb-2 text-sm font-medium">Pilih Atasan</label><select id="pilihAtasan" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"><option value="">-- Tidak ada --</option>${tops.map(createOption).join('')}</select></div>
+                        <div class="mb-4"><label for="pilihBawahan" class="block mb-2 text-sm font-medium">Pilih Bawahan</label><select id="pilihBawahan" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"><option value="">-- Tidak ada --</option>${bottoms.map(createOption).join('')}</select></div>
+                        <div class="mb-6"><label for="pilihAksesoris" class="block mb-2 text-sm font-medium">Pilih Aksesoris</label><select id="pilihAksesoris" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"><option value="">-- Tidak ada --</option>${accessories.map(createOption).join('')}</select></div>
+                        <div class="flex justify-end"><button type="submit" class="btn-primary px-6 py-2 rounded-lg font-semibold">Simpan Kostum</button></div>
+                    </form>
+                </div>`;
             document.getElementById('outfit-form').addEventListener('submit', handleSaveOutfit);
         }
 
@@ -349,7 +395,9 @@
                 const aksesoris = allClothes.find(c => c.id === outfit.aksesorisId);
                 return `<div class="card bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"><div class="p-4 border-b dark:border-gray-700"><h3 class="font-bold text-lg truncate">${outfit.namaKostum}</h3></div><div class="p-4 grid grid-cols-3 gap-2 h-32"><div class="flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md">${atasan ? `<img src="${atasan.foto || ''}" alt="${atasan.namaBaju}" class="h-full w-full object-contain p-1">` : '<i class="fas fa-question text-gray-400"></i>'}</div><div class="flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md">${bawahan ? `<img src="${bawahan.foto || ''}" alt="${bawahan.namaBaju}" class="h-full w-full object-contain p-1">` : '<i class="fas fa-question text-gray-400"></i>'}</div><div class="flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md">${aksesoris ? `<img src="${aksesoris.foto || ''}" alt="${aksesoris.namaBaju}" class="h-full w-full object-contain p-1">` : '<i class="fas fa-question text-gray-400"></i>'}</div></div><div class="p-2 bg-gray-50 dark:bg-gray-700 flex justify-end"><button data-id="${outfit.id}" class="delete-outfit-btn text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button></div></div>`;
             }).join('');
-            mainContent.innerHTML = `<h1 class="text-3xl font-bold mb-6">Daftar Kostum</h1>${allOutfits.length > 0 ? `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${outfitsHTML}</div>` : `<div class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md"><i class="fas fa-hanger text-5xl text-gray-400 mb-4"></i><h2 class="text-xl font-semibold">Anda belum membuat kostum.</h2><p class="text-gray-500">Padu padankan pakaian Anda di halaman 'Buat Kostum'!</p></div>`}`;
+            mainContent.innerHTML = `
+                <h1 class="text-3xl font-bold mb-6 hidden md:block">Daftar Kostum</h1>
+                ${allOutfits.length > 0 ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">${outfitsHTML}</div>` : `<div class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md"><i class="fas fa-hanger text-5xl text-gray-400 mb-4"></i><h2 class="text-xl font-semibold">Anda belum membuat kostum.</h2><p class="text-gray-500">Padu padankan pakaian Anda di halaman 'Buat Kostum'!</p></div>`}`;
         }
 
         // --- Modal & Form Handling ---
@@ -364,7 +412,6 @@
                 document.getElementById('tipeBaju').value = clothing.tipeBaju;
                 document.getElementById('ukuran').value = clothing.ukuran;
                 document.querySelector(`input[name="statusCuci"][value="${clothing.statusCuci}"]`).checked = true;
-                // Store existing photo data and show preview
                 if (clothing.foto) {
                     document.getElementById('existing-photo').value = clothing.foto;
                     imagePreview.src = clothing.foto;
@@ -413,7 +460,6 @@
                     showToast(id ? 'Pakaian diperbarui!' : 'Pakaian ditambahkan!');
                     render();
                 } else {
-                    // Firestore logic
                     (async () => {
                          try {
                             if (id) {
@@ -430,17 +476,11 @@
             };
 
             if (file) {
-                // New file selected, convert to Base64
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    processAndSave(e.target.result);
-                };
-                reader.onerror = () => {
-                    showToast('Gagal membaca file gambar.', 'error');
-                };
+                reader.onload = (e) => processAndSave(e.target.result);
+                reader.onerror = () => showToast('Gagal membaca file gambar.', 'error');
                 reader.readAsDataURL(file);
             } else {
-                // No new file, use existing photo if available
                 processAndSave(existingPhoto);
             }
         }
@@ -492,6 +532,24 @@
         }
 
         // --- Event Listeners & App Initialization ---
+        function setupResponsiveNav() {
+            const openSidebar = () => {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarOverlay.classList.remove('hidden');
+            };
+            const closeSidebar = () => {
+                sidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('hidden');
+            };
+            hamburgerButton.addEventListener('click', openSidebar);
+            sidebarOverlay.addEventListener('click', closeSidebar);
+            navigation.addEventListener('click', (e) => {
+                if (e.target.closest('a')) {
+                    closeSidebar();
+                }
+            });
+        }
+        
         navigation.addEventListener('click', (e) => {
             e.preventDefault();
             const target = e.target.closest('a');
@@ -589,7 +647,10 @@
             }, (error) => console.error("Error fetching outfits:", error));
         }
 
-        window.addEventListener('DOMContentLoaded', initializeFirebase);
+        window.addEventListener('DOMContentLoaded', () => {
+            setupResponsiveNav();
+            initializeFirebase();
+        });
     </script>
 </body>
 </html>
