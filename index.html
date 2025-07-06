@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajer Lemari</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .sidebar-icon {
+            transition: all 0.3s ease;
+        }
+        .sidebar-item:hover .sidebar-icon {
+            transform: scale(1.1);
+        }
+        .card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .modal-backdrop {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal-content {
+            transition: transform 0.3s ease-in-out;
+        }
+        .btn-primary {
+            background-color: #4f46e5;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
+        }
+        .nav-active {
+            background-color: #4f46e5;
+            color: white;
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fade-out {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(10px); }
+        }
+        .toast-in {
+            animation: fade-in 0.3s ease-out forwards;
+        }
+        .toast-out {
+            animation: fade-out 0.3s ease-in forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex flex-col items-center justify-center z-[100]">
+        <div class="text-center text-white">
+            <i class="fas fa-spinner fa-spin text-5xl"></i>
+            <p id="loading-text" class="mt-4 text-lg font-semibold">Mempersiapkan aplikasi...</p>
+        </div>
+    </div>
+
+    <div id="app-container" class="flex h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white dark:bg-gray-800 shadow-lg flex flex-col">
+            <div class="p-6 text-2xl font-bold text-indigo-600 dark:text-indigo-400 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-vest-patches mr-2"></i> Manajer Lemari
+            </div>
+            <nav id="navigation" class="flex-grow p-4 space-y-2">
+                <a href="#" data-view="dashboard" class="sidebar-item flex items-center px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 nav-active">
+                    <i class="fas fa-chart-pie w-6 text-center sidebar-icon"></i><span class="ml-4">Dashboard</span>
+                </a>
+                <a href="#" data-view="all-clothes" class="sidebar-item flex items-center px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i class="fas fa-tshirt w-6 text-center sidebar-icon"></i><span class="ml-4">Semua Pakaian</span>
+                </a>
+                <a href="#" data-view="laundry-basket" class="sidebar-item flex items-center px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i class="fas fa-shopping-basket w-6 text-center sidebar-icon"></i><span class="ml-4">Keranjang Cucian</span>
+                </a>
+                <a href="#" data-view="create-outfit" class="sidebar-item flex items-center px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i class="fas fa-user-tie w-6 text-center sidebar-icon"></i><span class="ml-4">Buat Kostum</span>
+                </a>
+                <a href="#" data-view="all-outfits" class="sidebar-item flex items-center px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i class="fas fa-book-open w-6 text-center sidebar-icon"></i><span class="ml-4">Daftar Kostum</span>
+                </a>
+            </nav>
+            <div id="user-info" class="p-4 border-t border-gray-200 dark:border-gray-700">
+                 <p class="text-xs text-gray-500">Mode:</p>
+                 <p id="user-id-display" class="text-xs font-semibold text-gray-600 dark:text-gray-400 break-words"></p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6 lg:p-10 overflow-y-auto">
+            <div id="main-content">
+                <!-- Content will be injected here by JavaScript -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Clothing Modal -->
+    <div id="clothing-modal" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop hidden items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg p-8 m-4 modal-content transform scale-95">
+            <h2 id="modal-title" class="text-2xl font-bold mb-6">Tambah Pakaian Baru</h2>
+            <form id="clothing-form">
+                <input type="hidden" id="clothing-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="mb-4">
+                        <label for="namaBaju" class="block mb-2 text-sm font-medium">Nama Baju</label>
+                        <input type="text" id="namaBaju" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" placeholder="cth: Kemeja Flanel Kotak" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="ukuran" class="block mb-2 text-sm font-medium">Ukuran</label>
+                        <input type="text" id="ukuran" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" placeholder="cth: L atau 42" required>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="tipeBaju" class="block mb-2 text-sm font-medium">Tipe Baju</label>
+                    <select id="tipeBaju" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" required>
+                        <optgroup label="Atasan">
+                            <option value="Kaos Pendek">Kaos Pendek</option>
+                            <option value="Kaos Panjang">Kaos Panjang</option>
+                            <option value="Kaos Bekerah">Kaos Bekerah</option>
+                            <option value="Kemeja">Kemeja</option>
+                            <option value="PDH/Seragam">PDH/Seragam</option>
+                            <option value="Kemeja Muslim">Kemeja Muslim</option>
+                            <option value="Batik">Batik</option>
+                            <option value="Jaket">Jaket & Sejenisnya</option>
+                        </optgroup>
+                        <optgroup label="Bawahan">
+                            <option value="Celana Panjang">Celana Panjang</option>
+                            <option value="Celana Panjang Sport">Celana Panjang Sport</option>
+                            <option value="Sarung">Sarung</option>
+                        </optgroup>
+                        <optgroup label="Aksesoris">
+                            <option value="Fungsional">Fungsional (cth: ikat pinggang)</option>
+                            <option value="Fashion">Fashion (cth: topi, syal)</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="foto" class="block mb-2 text-sm font-medium">Link Foto (Google Drive)</label>
+                    <input type="url" id="foto" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" placeholder="https://drive.google.com/...">
+                    <p class="text-xs text-gray-500 mt-1">Pastikan link dapat diakses publik. Format: `https://drive.google.com/uc?id=FILE_ID`</p>
+                </div>
+                <div class="mb-6">
+                    <label class="block mb-2 text-sm font-medium">Status Cucian</label>
+                    <div class="flex items-center space-x-4">
+                        <label><input type="radio" name="statusCuci" value="true" class="mr-2" checked> Sudah Dicuci</label>
+                        <label><input type="radio" name="statusCuci" value="false" class="mr-2"> Perlu Dicuci</label>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-btn" class="px-6 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400">Batal</button>
+                    <button type="submit" class="px-6 py-2 btn-primary rounded-lg">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop hidden items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 m-4 modal-content">
+            <h2 id="confirm-title" class="text-xl font-bold mb-4">Konfirmasi</h2>
+            <p id="confirm-message" class="mb-6">Apakah Anda yakin ingin menghapus item ini?</p>
+            <div class="flex justify-end space-x-4">
+                <button id="confirm-cancel-btn" class="px-6 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400">Batal</button>
+                <button id="confirm-ok-btn" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[90] space-y-2 w-full max-w-xs"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, onSnapshot, updateDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'wardrobe-manager-default';
+        
+        let app, auth, db;
+        let userId = null;
+        let clothesCollection, outfitsCollection;
+        let unsubscribeClothes, unsubscribeOutfits;
+        let isAuthReady = false;
+        let isLocalMode = false;
+
+        let allClothes = [];
+        let allOutfits = [];
+        let currentView = 'dashboard';
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const mainContent = document.getElementById('main-content');
+        const navigation = document.getElementById('navigation');
+        const clothingModal = document.getElementById('clothing-modal');
+        const clothingForm = document.getElementById('clothing-form');
+        const confirmModal = document.getElementById('confirm-modal');
+        const toastContainer = document.getElementById('toast-container');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const userInfoContainer = document.getElementById('user-info');
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            const icon = type === 'success' ? '<i class="fas fa-check-circle mr-3"></i>' : '<i class="fas fa-exclamation-circle mr-3"></i>';
+            const bgColor = type === 'success' ? 'bg-green-500 dark:bg-green-600' : 'bg-red-500 dark:bg-red-600';
+            toast.className = `flex items-center p-4 rounded-lg text-white ${bgColor} shadow-lg toast-in`;
+            toast.innerHTML = `${icon}<span>${message}</span>`;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('toast-in');
+                toast.classList.add('toast-out');
+                toast.addEventListener('animationend', () => toast.remove());
+            }, 3000);
+        }
+
+        function getGoogleDriveImageUrl(url) {
+            if (!url) return 'https://placehold.co/400x400/e2e8f0/64748b?text=No+Image';
+            try {
+                if (url.includes('uc?id=')) return url;
+                const fileId = url.split('/d/')[1].split('/')[0];
+                return `https://drive.google.com/uc?id=${fileId}`;
+            } catch (error) {
+                console.error("Invalid Google Drive URL:", url);
+                return 'https://placehold.co/400x400/e2e8f0/64748b?text=Invalid+Link';
+            }
+        }
+        
+        function showConfirmation(title, message, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            confirmModal.classList.remove('hidden');
+            confirmModal.classList.add('flex');
+            const okBtn = document.getElementById('confirm-ok-btn');
+            const cancelBtn = document.getElementById('confirm-cancel-btn');
+            const okHandler = () => { onConfirm(); hideConfirmation(); cleanup(); };
+            const cancelHandler = () => { hideConfirmation(); cleanup(); };
+            const cleanup = () => {
+                okBtn.removeEventListener('click', okHandler);
+                cancelBtn.removeEventListener('click', cancelHandler);
+            };
+            okBtn.addEventListener('click', okHandler);
+            cancelBtn.addEventListener('click', cancelHandler);
+        }
+
+        function hideConfirmation() {
+            confirmModal.classList.add('hidden');
+            confirmModal.classList.remove('flex');
+        }
+
+        function render() {
+            if (!isAuthReady) return;
+            navigation.querySelectorAll('a').forEach(link => {
+                link.classList.toggle('nav-active', link.dataset.view === currentView);
+            });
+            switch (currentView) {
+                case 'dashboard': renderDashboard(); break;
+                case 'all-clothes': renderAllClothes(); break;
+                case 'laundry-basket': renderLaundryBasket(); break;
+                case 'create-outfit': renderCreateOutfit(); break;
+                case 'all-outfits': renderAllOutfits(); break;
+                default: mainContent.innerHTML = `<h1 class="text-2xl font-bold">Halaman tidak ditemukan</h1>`;
+            }
+        }
+
+        function renderDashboard() {
+            const totalClothes = allClothes.length;
+            const washedCount = allClothes.filter(c => c.statusCuci).length;
+            const unwashedCount = totalClothes - washedCount;
+            const typeCategories = {
+                'Atasan': ['Kaos Pendek', 'Kaos Panjang', 'Kaos Bekerah', 'Kemeja', 'PDH/Seragam', 'Kemeja Muslim', 'Batik', 'Jaket'],
+                'Bawahan': ['Celana Panjang', 'Celana Panjang Sport', 'Sarung'],
+                'Aksesoris': ['Fungsional', 'Fashion']
+            };
+            const typeCounts = {
+                'Atasan': allClothes.filter(c => typeCategories['Atasan'].includes(c.tipeBaju)).length,
+                'Bawahan': allClothes.filter(c => typeCategories['Bawahan'].includes(c.tipeBaju)).length,
+                'Aksesoris': allClothes.filter(c => typeCategories['Aksesoris'].includes(c.tipeBaju)).length
+            };
+            mainContent.innerHTML = `
+                <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400">Total Pakaian</h3><p class="text-4xl font-bold text-indigo-600 dark:text-indigo-400">${totalClothes}</p></div>
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400">Sudah Dicuci</h3><p class="text-4xl font-bold text-green-500">${washedCount}</p></div>
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400">Perlu Dicuci</h3><p class="text-4xl font-bold text-red-500">${unwashedCount}</p></div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-bold mb-4">Distribusi Tipe Pakaian</h3>
+                    <div class="space-y-4">
+                        ${Object.keys(typeCounts).map(type => `<div class="flex items-center"><span class="w-24 font-medium">${type}</span><div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6"><div class="bg-indigo-500 h-6 rounded-full text-white text-sm flex items-center justify-center" style="width: ${totalClothes > 0 ? (typeCounts[type] / totalClothes) * 100 : 0}%">${typeCounts[type]}</div></div></div>`).join('')}
+                    </div>
+                </div>`;
+        }
+        
+        function generateClothingCard(clothing) {
+             return `<div class="card bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"><img src="${getGoogleDriveImageUrl(clothing.foto)}" alt="${clothing.namaBaju}" class="w-full h-48 object-cover"><div class="p-4"><h3 class="font-bold text-lg truncate">${clothing.namaBaju}</h3><p class="text-sm text-gray-500 dark:text-gray-400">${clothing.tipeBaju}</p><div class="flex justify-between items-center mt-4"><span class="px-3 py-1 text-xs font-semibold rounded-full ${clothing.statusCuci ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'}">${clothing.statusCuci ? 'Bersih' : 'Kotor'}</span><span class="font-semibold">${clothing.ukuran}</span></div></div><div class="p-2 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-2"><button data-id="${clothing.id}" class="edit-btn text-blue-500 hover:text-blue-700"><i class="fas fa-edit"></i></button><button data-id="${clothing.id}" class="delete-btn text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button></div></div>`;
+        }
+
+        function renderAllClothes() {
+            const clothesHTML = allClothes.map(generateClothingCard).join('');
+            mainContent.innerHTML = `<div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-bold">Semua Pakaian</h1><button id="add-clothing-btn" class="btn-primary px-4 py-2 rounded-lg font-semibold flex items-center"><i class="fas fa-plus mr-2"></i> Tambah Pakaian</button></div>${allClothes.length > 0 ? `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">${clothesHTML}</div>` : `<div class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md"><i class="fas fa-box-open text-5xl text-gray-400 mb-4"></i><h2 class="text-xl font-semibold">Lemari Anda masih kosong.</h2><p class="text-gray-500">Mulai dengan menambahkan pakaian baru!</p></div>`}`;
+            document.getElementById('add-clothing-btn')?.addEventListener('click', () => showClothingModal());
+        }
+
+        function renderLaundryBasket() {
+            const unwashedClothes = allClothes.filter(c => !c.statusCuci);
+            const clothesHTML = unwashedClothes.map(generateClothingCard).join('');
+            mainContent.innerHTML = `<div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-bold">Keranjang Cucian</h1></div>${unwashedClothes.length > 0 ? `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">${clothesHTML}</div>` : `<div class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md"><i class="fas fa-check-circle text-5xl text-green-500 mb-4"></i><h2 class="text-xl font-semibold">Hebat! Semua pakaian Anda bersih.</h2><p class="text-gray-500">Tidak ada yang perlu dicuci saat ini.</p></div>`}`;
+        }
+
+        function renderCreateOutfit() {
+            const typeCategories = { 'Atasan': ['Kaos Pendek', 'Kaos Panjang', 'Kaos Bekerah', 'Kemeja', 'PDH/Seragam', 'Kemeja Muslim', 'Batik', 'Jaket'], 'Bawahan': ['Celana Panjang', 'Celana Panjang Sport', 'Sarung'], 'Aksesoris': ['Fungsional', 'Fashion'] };
+            const cleanClothes = allClothes.filter(c => c.statusCuci);
+            const tops = cleanClothes.filter(c => typeCategories['Atasan'].includes(c.tipeBaju));
+            const bottoms = cleanClothes.filter(c => typeCategories['Bawahan'].includes(c.tipeBaju));
+            const accessories = cleanClothes.filter(c => typeCategories['Aksesoris'].includes(c.tipeBaju));
+            const createOption = (item) => `<option value="${item.id}">${item.namaBaju}</option>`;
+            mainContent.innerHTML = `<h1 class="text-3xl font-bold mb-6">Buat Kostum Baru</h1><div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md max-w-2xl mx-auto"><form id="outfit-form"><div class="mb-4"><label for="namaKostum" class="block mb-2 text-sm font-medium">Nama Kostum</label><input type="text" id="namaKostum" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" placeholder="cth: Setelan Kantor Santai" required></div><div class="mb-4"><label for="pilihAtasan" class="block mb-2 text-sm font-medium">Pilih Atasan</label><select id="pilihAtasan" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"><option value="">-- Tidak ada --</option>${tops.map(createOption).join('')}</select></div><div class="mb-4"><label for="pilihBawahan" class="block mb-2 text-sm font-medium">Pilih Bawahan</label><select id="pilihBawahan" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"><option value="">-- Tidak ada --</option>${bottoms.map(createOption).join('')}</select></div><div class="mb-6"><label for="pilihAksesoris" class="block mb-2 text-sm font-medium">Pilih Aksesoris</label><select id="pilihAksesoris" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"><option value="">-- Tidak ada --</option>${accessories.map(createOption).join('')}</select></div><div class="flex justify-end"><button type="submit" class="btn-primary px-6 py-2 rounded-lg font-semibold">Simpan Kostum</button></div></form></div>`;
+            document.getElementById('outfit-form').addEventListener('submit', handleSaveOutfit);
+        }
+
+        function renderAllOutfits() {
+            const outfitsHTML = allOutfits.map(outfit => {
+                const atasan = allClothes.find(c => c.id === outfit.atasanId);
+                const bawahan = allClothes.find(c => c.id === outfit.bawahanId);
+                const aksesoris = allClothes.find(c => c.id === outfit.aksesorisId);
+                return `<div class="card bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"><div class="p-4 border-b dark:border-gray-700"><h3 class="font-bold text-lg truncate">${outfit.namaKostum}</h3></div><div class="p-4 grid grid-cols-3 gap-2 h-32"><div class="flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md">${atasan ? `<img src="${getGoogleDriveImageUrl(atasan.foto)}" alt="${atasan.namaBaju}" class="h-full w-full object-contain p-1">` : '<i class="fas fa-question text-gray-400"></i>'}</div><div class="flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md">${bawahan ? `<img src="${getGoogleDriveImageUrl(bawahan.foto)}" alt="${bawahan.namaBaju}" class="h-full w-full object-contain p-1">` : '<i class="fas fa-question text-gray-400"></i>'}</div><div class="flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md">${aksesoris ? `<img src="${getGoogleDriveImageUrl(aksesoris.foto)}" alt="${aksesoris.namaBaju}" class="h-full w-full object-contain p-1">` : '<i class="fas fa-question text-gray-400"></i>'}</div></div><div class="p-2 bg-gray-50 dark:bg-gray-700 flex justify-end"><button data-id="${outfit.id}" class="delete-outfit-btn text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button></div></div>`;
+            }).join('');
+            mainContent.innerHTML = `<h1 class="text-3xl font-bold mb-6">Daftar Kostum</h1>${allOutfits.length > 0 ? `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${outfitsHTML}</div>` : `<div class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md"><i class="fas fa-hanger text-5xl text-gray-400 mb-4"></i><h2 class="text-xl font-semibold">Anda belum membuat kostum.</h2><p class="text-gray-500">Padu padankan pakaian Anda di halaman 'Buat Kostum'!</p></div>`}`;
+        }
+
+        function showClothingModal(clothing = null) {
+            clothingForm.reset();
+            const modalTitle = document.getElementById('modal-title');
+            if (clothing) {
+                modalTitle.textContent = 'Edit Pakaian';
+                document.getElementById('clothing-id').value = clothing.id;
+                document.getElementById('namaBaju').value = clothing.namaBaju;
+                document.getElementById('tipeBaju').value = clothing.tipeBaju;
+                document.getElementById('ukuran').value = clothing.ukuran;
+                document.getElementById('foto').value = clothing.foto || '';
+                document.querySelector(`input[name="statusCuci"][value="${clothing.statusCuci}"]`).checked = true;
+            } else {
+                modalTitle.textContent = 'Tambah Pakaian Baru';
+                document.getElementById('clothing-id').value = '';
+            }
+            clothingModal.classList.remove('hidden');
+            clothingModal.classList.add('flex');
+            setTimeout(() => { clothingModal.querySelector('.modal-content').classList.remove('scale-95'); }, 10);
+        }
+
+        function hideClothingModal() {
+            clothingModal.querySelector('.modal-content').classList.add('scale-95');
+            clothingModal.classList.add('opacity-0');
+            setTimeout(() => { clothingModal.classList.add('hidden'); clothingModal.classList.remove('flex'); clothingModal.classList.remove('opacity-0'); }, 300);
+        }
+        
+        async function handleSaveClothing(e) {
+            e.preventDefault();
+            if(!isAuthReady) { showToast("Aplikasi belum siap, coba lagi sebentar.", "error"); return; }
+            const id = document.getElementById('clothing-id').value;
+            const clothingData = {
+                namaBaju: document.getElementById('namaBaju').value,
+                tipeBaju: document.getElementById('tipeBaju').value,
+                ukuran: document.getElementById('ukuran').value,
+                foto: document.getElementById('foto').value,
+                statusCuci: document.querySelector('input[name="statusCuci"]:checked').value === 'true',
+            };
+
+            if (isLocalMode) {
+                if (id) {
+                    allClothes = allClothes.map(c => c.id === id ? { ...c, ...clothingData, id: id } : c);
+                } else {
+                    allClothes.push({ ...clothingData, id: Date.now().toString() });
+                }
+                localStorage.setItem('wardrobe_clothes', JSON.stringify(allClothes));
+                showToast(id ? 'Pakaian diperbarui!' : 'Pakaian ditambahkan!');
+                render();
+            } else {
+                try {
+                    if (id) {
+                        await updateDoc(doc(db, clothesCollection.path, id), clothingData);
+                        showToast('Pakaian berhasil diperbarui!');
+                    } else {
+                        await addDoc(clothesCollection, clothingData);
+                        showToast('Pakaian berhasil ditambahkan!');
+                    }
+                } catch (error) { console.error("Error saving clothing: ", error); showToast('Gagal menyimpan data.', 'error'); }
+            }
+            hideClothingModal();
+        }
+
+        async function handleSaveOutfit(e) {
+            e.preventDefault();
+            if(!isAuthReady) { showToast("Aplikasi belum siap, coba lagi sebentar.", "error"); return; }
+            const outfitData = {
+                namaKostum: document.getElementById('namaKostum').value,
+                atasanId: document.getElementById('pilihAtasan').value,
+                bawahanId: document.getElementById('pilihBawahan').value,
+                aksesorisId: document.getElementById('pilihAksesoris').value,
+            };
+            if (!outfitData.namaKostum) { showToast("Nama kostum tidak boleh kosong!", "error"); return; }
+
+            if (isLocalMode) {
+                allOutfits.push({ ...outfitData, id: Date.now().toString() });
+                localStorage.setItem('wardrobe_outfits', JSON.stringify(allOutfits));
+                showToast('Kostum disimpan!');
+            } else {
+                try {
+                    await addDoc(outfitsCollection, outfitData);
+                    showToast('Kostum berhasil disimpan!');
+                } catch (error) { console.error("Error saving outfit: ", error); showToast('Gagal menyimpan kostum.', 'error'); }
+            }
+            currentView = 'all-outfits';
+            render();
+        }
+        
+        async function deleteItem(id, type) {
+            if (isLocalMode) {
+                if (type === 'clothing') {
+                    allClothes = allClothes.filter(c => c.id !== id);
+                    localStorage.setItem('wardrobe_clothes', JSON.stringify(allClothes));
+                } else if (type === 'outfit') {
+                    allOutfits = allOutfits.filter(o => o.id !== id);
+                    localStorage.setItem('wardrobe_outfits', JSON.stringify(allOutfits));
+                }
+                showToast(`${type === 'clothing' ? 'Pakaian' : 'Kostum'} dihapus.`);
+                render();
+            } else {
+                if (!userId) return;
+                try {
+                    if (type === 'clothing') await deleteDoc(doc(db, clothesCollection.path, id));
+                    else if (type === 'outfit') await deleteDoc(doc(db, outfitsCollection.path, id));
+                    showToast(`${type === 'clothing' ? 'Pakaian' : 'Kostum'} berhasil dihapus.`);
+                } catch (error) { console.error(`Error deleting ${type}:`, error); showToast(`Gagal menghapus ${type}.`, 'error'); }
+            }
+        }
+
+        navigation.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = e.target.closest('a');
+            if (target && target.dataset.view) { currentView = target.dataset.view; render(); }
+        });
+        clothingForm.addEventListener('submit', handleSaveClothing);
+        document.getElementById('cancel-btn').addEventListener('click', hideClothingModal);
+        mainContent.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.edit-btn');
+            if (editBtn) {
+                const clothingToEdit = allClothes.find(c => c.id === editBtn.dataset.id);
+                if (clothingToEdit) showClothingModal(clothingToEdit);
+            }
+            const deleteBtn = e.target.closest('.delete-btn');
+            if (deleteBtn) {
+                showConfirmation('Hapus Pakaian', 'Apakah Anda yakin ingin menghapus pakaian ini?', () => deleteItem(deleteBtn.dataset.id, 'clothing'));
+            }
+            const deleteOutfitBtn = e.target.closest('.delete-outfit-btn');
+            if (deleteOutfitBtn) {
+                showConfirmation('Hapus Kostum', 'Apakah Anda yakin ingin menghapus kostum ini?', () => deleteItem(deleteOutfitBtn.dataset.id, 'outfit'));
+            }
+        });
+
+        function setupLocalMode() {
+            isLocalMode = true;
+            isAuthReady = true;
+            userInfoContainer.querySelector('p').textContent = 'Mode:';
+            userIdDisplay.textContent = 'Lokal (Offline)';
+            userIdDisplay.classList.add('text-green-500');
+            allClothes = JSON.parse(localStorage.getItem('wardrobe_clothes')) || [];
+            allOutfits = JSON.parse(localStorage.getItem('wardrobe_outfits')) || [];
+            loadingOverlay.classList.add('hidden');
+            render();
+        }
+
+        async function initializeFirebase() {
+            if (!firebaseConfig) {
+                setupLocalMode();
+                return;
+            }
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                setLogLevel('debug');
+                loadingText.textContent = 'Menghubungkan ke server...';
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        userInfoContainer.querySelector('p').textContent = 'ID Pengguna:';
+                        userIdDisplay.textContent = userId;
+                        userIdDisplay.classList.remove('text-green-500');
+                        setupFirestoreListeners();
+                        loadingOverlay.classList.add('hidden');
+                    } else {
+                        try {
+                            const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                            if (initialToken) await signInWithCustomToken(auth, initialToken);
+                            else await signInAnonymously(auth);
+                        } catch (error) { console.error("Authentication failed:", error); loadingText.textContent = 'Gagal otentikasi.'; }
+                    }
+                });
+            } catch (error) { console.error("Firebase initialization failed:", error); loadingText.textContent = 'Inisialisasi Gagal.'; }
+        }
+
+        function setupFirestoreListeners() {
+            if (!userId) return;
+            const clothesPath = `artifacts/${appId}/users/${userId}/pakaian`;
+            const outfitsPath = `artifacts/${appId}/users/${userId}/kostum`;
+            clothesCollection = collection(db, clothesPath);
+            outfitsCollection = collection(db, outfitsPath);
+            if (unsubscribeClothes) unsubscribeClothes();
+            if (unsubscribeOutfits) unsubscribeOutfits();
+            unsubscribeClothes = onSnapshot(clothesCollection, (snapshot) => {
+                allClothes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                render();
+            }, (error) => console.error("Error fetching clothes:", error));
+            unsubscribeOutfits = onSnapshot(outfitsCollection, (snapshot) => {
+                allOutfits = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                render();
+            }, (error) => console.error("Error fetching outfits:", error));
+        }
+
+        window.addEventListener('DOMContentLoaded', initializeFirebase);
+    </script>
+</body>
+</html>
