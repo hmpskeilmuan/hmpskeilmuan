@@ -198,7 +198,14 @@
         import { getFirestore, collection, doc, addDoc, onSnapshot, updateDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- App State ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const firebaseConfig = {
+          apiKey: "AIzaSyCj-HDVwbx8kcYkVdqsoxKRuQZH7Cp8aZY",
+          authDomain: "manajer-lemari-saya.firebaseapp.com",
+          projectId: "manajer-lemari-saya",
+          storageBucket: "manajer-lemari-saya.firebasestorage.app",
+          messagingSenderId: "130263056207",
+          appId: "1:130263056207:web:a99b0333c9e69a1fb94f3a"
+        };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'wardrobe-manager-default';
         let isLocalMode = false;
         let isAuthReady = false;
